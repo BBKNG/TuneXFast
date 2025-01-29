@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuneXFast - Calculateur de Devis</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+        }
+
+        nav strong {
+            color: white;
+        }
+
+        nav strong span {
+            color: #c8a700;
+        }
+
+        select,
+        input,
+        button {
+            color: #fff;
+            background-color: #222;
+            border: 1px solid #c8a700;
+        }
+    </style>
+    <script>
+        const modelsByBrand = {
+            "Honda": ["CBR1000RR-R Fireblade", "CBR650R", "CBR500R", "CBR300R", "CBR250R", "CBR150R", "CBR125R", "CB1000R", "CB650R", "CB500F", "Africa Twin", "Forza 750", "PCX 125", "Monkey 125", "CB125R", "CMX1100 Rebel", "CMX500 Rebel", "X-ADV", "NC750X", "CB500X", "Forza 350", "Forza 125", "PCX 160"],
+            "Yamaha": ["YZF-R1M", "YZF-R1", "YZF-R9", "YZF-R7", "YZF-R3", "YZF-R125", "MT-10 SP", "MT-09 SP", "MT-10", "MT-09", "Tracer 9", "XMAX 125", "NMAX 125", "Ténéré 700", "Super Ténéré 1200ZE", "FJR1300AS"],
+            "Kawasaki": ["Ninja ZX-10R", "Ninja ZX-6R", "Ninja 400", "Z900", "Z650", "Versys 650", "J300", "Z125", "Vulcan 1700", "Versys 1000"],
+            "Suzuki": ["Hayabusa", "GSX-R1000", "GSX-R750", "GSX-R600", "V-Strom 650", "Burgman 400", "GSX-S125", "GSX-S1000GT", "SV650"],
+            "SYM": ["JET14", "Fiddle", "Crox", "Joymax", "Wolf 125", "NH-T 125", "NH-X 200", "Symphony 125", "Orbit III 125"],
+            "Zontes": ["125 GK", "125 U", "350 X", "350 D", "703RR"],
+            "KTM": ["RC 125", "RC 390", "1290 Super Adventure R", "390 Adventure", "790 Adventure"],
+            "Vespa": ["Primavera 50", "Primavera 125", "Sprint 50", "GTS 125", "Sei Giorni"],
+            "Piaggio": ["Liberty 50", "Liberty 125", "Beverly 300", "MP3 400", "NRG 50"],
+            "Peugeot": ["Django 50", "Django 125", "Speedfight 50", "Tweet 125", "Kisbee 50"]
+        };
+
+        const services = [
+            {name: "Mèche à pneu", time: 5},
+            {name: "Changement des plaquettes de frein", time: 20},
+            {name: "Vérification et mise à niveau des liquides", time: 3},
+            {name: "Graissage général", time: 5},
+            {name: "Nettoyage complet", time: 10},
+            {name: "Changement du filtre à air", time: 2},
+            {name: "Nettoyage + graissage de la chaîne", time: 5},
+            {name: "Changement du kit chaîne", time: 120},
+            {name: "Changement de la courroie de distribution", time: 30},
+            {name: "Changement des pneus avant", time: 45},
+            {name: "Changement des pneus arrière", time: 60}
+        ];
+
+        function updateModels() {
+            const brand = document.getElementById("brand").value;
+            const modelSelect = document.getElementById("model");
+            modelSelect.innerHTML = "<option value='' disabled selected>Choisissez un modèle</option>";
+            if (modelsByBrand[brand]) {
+                modelsByBrand[brand].forEach(model => {
+                    const option = document.createElement("option");
+                    option.value = model;
+                    option.textContent = model;
+                    modelSelect.appendChild(option);
+                });
+                modelSelect.disabled = false;
+            } else {
+                modelSelect.disabled = true;
+            }
+        }
+
+        function calculateTotal() {
+            let totalTime = 0;
+            let totalCost = 0;
+            const hourlyRate = 60;
+
+            document.querySelectorAll('input[type="checkbox"]:checked').forEach(service => {
+                totalTime += parseInt(service.dataset.time);
+                totalCost += (parseFloat(service.dataset.time) / 60) * hourlyRate;
+            });
+
+            document.getElementById('totalTime').textContent = totalTime + ' minutes';
+            document.getElementById('totalCost').textContent = totalCost.toFixed(2) + ' CHF';
+        }
+
+        function sendDevis() {
+            const name = document.getElementById("name").value || "Nom non renseigné";
+            const phone = document.getElementById("phone").value || "Téléphone non renseigné";
+            const brand = document.getElementById("brand").value || "Marque non renseignée";
+            const model = document.getElementById("model").value || "Modèle non renseigné";
+
+            let selectedServices = "";
+            document.querySelectorAll('input[type="checkbox"]:checked').forEach(service => {
+                selectedServices += `- ${service.nextSibling.textContent.trim()}\n`;
+            });
+
+            const totalTime = document.getElementById("totalTime").textContent;
+            const totalCost = document.getElementById("totalCost").textContent;
+
+            const emailContent = `
+                Nom : ${name}\n
+                Téléphone : ${phone}\n
+                Marque : ${brand}\n
+                Modèle : ${model}\n
+                Services sélectionnés :\n${selectedServices}\n
+                Temps total estimé : ${totalTime}\n
+                Prix total estimé : ${totalCost}
+            `;
+
+            console.log("Email envoyé avec le contenu suivant :", emailContent);
+            alert("Le devis a été validé et envoyé avec succès !");
+        }
+
+        function downloadPDF() {
+            const {jsPDF} = window.jspdf;
+            const pdf = new jsPDF();
+            const name = document.getElementById("name").value || "Nom non renseigné";
+            const phone = document.getElementById("phone").value || "Téléphone non renseigné";
+            const brand = document.getElementById("brand").value || "Marque non renseignée";
+            const model = document.getElementById("model").value || "Modèle non renseigné";
+
+            pdf.text("Devis TuneXFast", 10, 10);
+            pdf.text(`Nom : ${name}`, 10, 20);
+            pdf.text(`Téléphone : ${phone}`, 10, 30);
+            pdf.text(`Marque : ${brand}`, 10, 40);
+            pdf.text(`Modèle : ${model}`, 10, 50);
+
+            let yPosition = 60;
+            document.querySelectorAll('input[type="checkbox"]:checked').forEach(service => {
+                pdf.text(`- ${service.nextSibling.textContent.trim()}`, 10, yPosition);
+                yPosition += 10;
+            });
+
+            pdf.text(`Temps total : ${document.getElementById("totalTime").textContent}`, 10, yPosition);
+            yPosition += 10;
+            pdf.text(`Prix total : ${document.getElementById("totalCost").textContent}`, 10, yPosition);
+
+            pdf.save("Devis-TuneXFast.pdf");
+        }
+    </script>
+</head>
+
+<body>
+    <nav>
+        <ul>
+            <li><strong>Tune<span>X</span>Fast</strong></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <h2>Calculateur de Devis</h2>
+
+        <fieldset>
+            <legend>Votre véhicule</legend>
+            <label for="brand">Marque</label>
+            <select id="brand" onchange="updateModels()">
+                <option value="" disabled selected>Choisissez une marque</option>
+                <script>
+                    Object.keys(modelsByBrand).forEach(brand => {
+                        document.write(`<option value="${brand}">${brand}</option>`);
+                    });
+                </script>
+            </select>
+            <label for="model">Modèle</label>
+            <select id="model" disabled>
+                <option value="" disabled selected>Choisissez une marque d'abord</option>
+            </select>
+        </fieldset>
+
+        <fieldset>
+            <legend>Services disponibles</legend>
+            <div id="services">
+                <script>
+                    services.forEach(service => {
+                        document.write(`
+                            <label>
+                                <input type="checkbox" data-time="${service.time}" onchange="calculateTotal()"> 
+                                ${service.name} (${service.time} min)
+                            </label>
+                        `);
+                    });
+                </script>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Vos informations</legend>
+            <label for="name">Nom</label>
+            <input type="text" id="name" placeholder="Votre nom">
+            <label for="phone">Téléphone</label>
+            <input type="tel" id="phone" placeholder="Votre téléphone">
+        </fieldset>
+
+        <div id="summary">
+            <h3>Résumé</h3>
+            <p><strong>Temps total estimé :</strong> <span id="totalTime">0 minutes</span></p>
+            <p><strong>Prix total estimé :</strong> <span id="totalCost">0 CHF</span></p>
+        </div>
+
+        <button onclick="sendDevis()">Valider le devis</button>
+        <button onclick="downloadPDF()">Télécharger le devis</button>
+    </main>
+</body>
+
+</html>
