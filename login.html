@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Connexion - TuneXFast</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <style>
+    body {
+      background-color: #000;
+      color: #fff;
+    }
+    nav strong {
+      color: white;
+    }
+    nav strong span {
+      color: #c8a700;
+    }
+    input, button {
+      background-color: #222;
+      color: #fff;
+      border: 1px solid #c8a700;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Connexion à Tune<span>X</span>Fast</h1>
+
+    <!-- Affiche un message d'erreur si paramètre "error=1" dans l'URL -->
+    <?php if (isset($_GET['error']) && $_GET['error'] == 1): ?>
+      <p style="color: red;">Identifiants incorrects, veuillez réessayer.</p>
+    <?php endif; ?>
+
+    <form method="post" action="login.php">
+      <label for="username">Nom d'utilisateur</label>
+      <input type="text" id="username" name="username" required>
+
+      <label for="password">Mot de passe</label>
+      <input type="password" id="password" name="password" required>
+
+      <button type="submit">Se connecter</button>
+    </form>
+  </main>
+</body>
+</html>

@@ -1,18 +1,8 @@
-<?php
-// index.php
-session_start();
-
-// Vérifie si l'utilisateur est connecté
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    // Redirection vers la page de connexion si non connecté
-    header('Location: login.html');
-    exit;
-}
-?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TuneXFast - Calculateur de Devis</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
   <style>
@@ -43,9 +33,11 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
       margin-top: 20px;
     }
   </style>
+
   <!-- Librairies externes (PDF, QRCode) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <script>
     // Liste des marques et modèles
     const modelsByBrand = {
@@ -85,10 +77,11 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
         total += parseFloat(el.getAttribute('data-prix'));
       });
       document.getElementById("total").textContent = `Total : ${total}€`;
-      document.getElementById("hiddenTotal").value = total; // Pour envoyer en POST
+      // Mémoriser le total dans un champ caché pour l'envoyer en POST
+      document.getElementById("hiddenTotal").value = total;
     }
 
-    // Génération du QR Code pour partager le devis
+    // Génération du QR Code pour partager le devis (ou l'URL)
     document.addEventListener('DOMContentLoaded', function() {
       new QRCode(document.getElementById("qrcode"), {
         text: "https://votresite.com/devis/12345",
@@ -102,7 +95,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       doc.text("Facture TuneXFast", 10, 10);
-
+      // Récupérer quelques infos du formulaire pour la facture
       const brand = document.getElementById("brand").value || "Non spécifié";
       const model = document.getElementById("model").value || "Non spécifié";
       const total = document.getElementById("total").textContent || "Total : 0€";
@@ -110,7 +103,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
       doc.text(`Marque : ${brand}`, 10, 20);
       doc.text(`Modèle : ${model}`, 10, 30);
       doc.text(total, 10, 40);
-
       doc.save("facture.pdf");
     }
 
@@ -124,6 +116,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
   </script>
 </head>
 <body>
+  <!-- Navigation -->
   <nav class="container-fluid">
     <ul>
       <li><strong>Tune<span>X</span>Fast</strong></li>
@@ -131,13 +124,31 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     </ul>
   </nav>
 
+  <!-- Bloc PHP : traitement côté serveur -->
+  <?php
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+      $brand = $_POST["brand"] ?? "Non spécifié";
+      $model = $_POST["model"] ?? "Non spécifié";
+      $total = $_POST["total"] ?? "0";
+
+      echo "<section class='container'>";
+      echo "<h3>Devis validé côté serveur</h3>";
+      echo "<p>Marque : " . htmlspecialchars($brand) . "</p>";
+      echo "<p>Modèle : " . htmlspecialchars($model) . "</p>";
+      echo "<p>Total : " . htmlspecialchars($total) . "€</p>";
+      echo "<p>Un e-mail de confirmation vous a été envoyé.</p>";
+      echo "</section>";
+    }
+  ?>
+
+  <!-- Contenu principal -->
   <main class="container">
     <hgroup>
       <h2>Calculateur de Devis</h2>
-      <h3>Choisissez votre véhicule et les services désirés.</h3>
+      <h3>Le devis affiche uniquement la main-d'œuvre. Choisissez vos services ci-dessous.</h3>
     </hgroup>
 
-    <form method="post" action="process.php">
+    <form method="post" action="">
       <fieldset>
         <legend>Votre véhicule</legend>
         <label for="brand">Marque</label>
@@ -149,7 +160,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
             });
           </script>
         </select>
-
         <label for="model">Modèle</label>
         <select id="model" name="model" disabled>
           <option value="" disabled selected>Choisissez une marque d'abord</option>
@@ -158,13 +168,36 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
       <fieldset>
         <legend>Services</legend>
-        <label><input type="checkbox" class="service" data-prix="50" name="service[]" value="vidange" onchange="updateTotal()"> Vidange (50€)</label>
-        <label><input type="checkbox" class="service" data-prix="30" name="service[]" value="plaquettes" onchange="updateTotal()"> Remplacement de plaquettes (30€)</label>
-        <label><input type="checkbox" class="service" data-prix="60" name="service[]" value="kit_chaine" onchange="updateTotal()"> Remplacement kit chaîne (60€)</label>
-        <label><input type="checkbox" class="service" data-prix="40" name="service[]" value="purge_frein" onchange="updateTotal()"> Purge circuit de frein (40€)</label>
-        <label><input type="checkbox" class="service" data-prix="80" name="service[]" value="revision_generale" onchange="updateTotal()"> Révision générale (80€)</label>
-        <label><input type="checkbox" class="service" data-prix="35" name="service[]" value="filtre_air" onchange="updateTotal()"> Remplacement filtre à air (35€)</label>
-        <label><input type="checkbox" class="service" data-prix="25" name="service[]" value="bougies" onchange="updateTotal()"> Remplacement bougies (25€)</label>
+        <!-- Ajoutez ici tous les services que vous souhaitez proposer -->
+        <label>
+          <input type="checkbox" class="service" data-prix="50" name="service[]" value="vidange" onchange="updateTotal()">
+          Vidange (50€)
+        </label>
+        <label>
+          <input type="checkbox" class="service" data-prix="30" name="service[]" value="plaquettes" onchange="updateTotal()">
+          Remplacement de plaquettes (30€)
+        </label>
+        <label>
+          <input type="checkbox" class="service" data-prix="60" name="service[]" value="kit_chaine" onchange="updateTotal()">
+          Remplacement kit chaîne (60€)
+        </label>
+        <label>
+          <input type="checkbox" class="service" data-prix="40" name="service[]" value="purge_frein" onchange="updateTotal()">
+          Purge circuit de frein (40€)
+        </label>
+        <label>
+          <input type="checkbox" class="service" data-prix="80" name="service[]" value="revision_generale" onchange="updateTotal()">
+          Révision générale (80€)
+        </label>
+        <label>
+          <input type="checkbox" class="service" data-prix="35" name="service[]" value="filtre_air" onchange="updateTotal()">
+          Remplacement filtre à air (35€)
+        </label>
+        <label>
+          <input type="checkbox" class="service" data-prix="25" name="service[]" value="bougies" onchange="updateTotal()">
+          Remplacement bougies (25€)
+        </label>
+        <!-- Ajoutez d'autres services au besoin -->
       </fieldset>
 
       <p id="total">Total : 0€</p>
@@ -175,6 +208,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
       <button type="submit" name="submit">Valider le devis</button>
     </form>
 
+    <!-- QR Code pour partage du devis -->
     <section id="qrcode"></section>
   </main>
 
